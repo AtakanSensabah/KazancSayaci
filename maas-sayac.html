@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Kazanç Sayacı</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --accent: #00ff88;
+    --accent2: #ff6b35;
+    --text: #f0f0f5;
+    --muted: #555570;
+    --border: #2a2a3a;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 24px 20px;
+    position: relative;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,255,136,0.07) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 4px;
+  }
+
+  .header h1 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* Main counter card */
+  .counter-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .counter-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .counter-card.running::before {
+    opacity: 1;
+    animation: scanline 2s linear infinite;
+  }
+
+  @keyframes scanline {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .counter-label {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .counter-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 52px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -2px;
+    transition: color 0.3s;
+    text-shadow: 0 0 30px rgba(0,255,136,0.3);
+  }
+
+  .counter-value.pulse {
+    animation: countPulse 0.15s ease-out;
+  }
+
+  @keyframes countPulse {
+    0% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+
+  .counter-currency {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .stat-value.highlight {
+    color: var(--accent2);
+  }
+
+  /* Progress bar */
+  .progress-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 18px;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .progress-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .progress-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .progress-track {
+    height: 6px;
+    background: var(--surface);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #00ccff);
+    border-radius: 99px;
+    transition: width 1s linear;
+    box-shadow: 0 0 8px rgba(0,255,136,0.5);
+  }
+
+  /* Setup form */
+  .setup-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px 20px;
+  }
+
+  .setup-title {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+
+  .input-group {
+    margin-bottom: 14px;
+  }
+
+  .input-label {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  input[type="number"], select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    color: var(--text);
+    outline: none;
+    -webkit-appearance: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="number"]:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  select {
+    flex: 0 0 auto;
+    width: auto;
+    font-size: 13px;
+    padding: 12px 10px;
+  }
+
+  select option {
+    background: var(--surface);
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .btn {
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active { transform: scale(0.96); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-stop {
+    background: rgba(255,107,53,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(255,107,53,0.3);
+  }
+
+  .btn-wide {
+    grid-column: 1 / -1;
+  }
+
+  /* Status dot */
+  .status-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .status-dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+    animation: blink 1.5s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .status-text {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  /* Time worked */
+  .time-worked {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* Screens */
+  #screen-setup { display: flex; flex-direction: column; gap: 16px; }
+  #screen-running { display: flex; flex-direction: column; gap: 14px; }
+  .hidden { display: none !important; }
+
+  /* Edit btn */
+  .edit-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SETUP SCREEN -->
+  <div id="screen-setup">
+    <div class="header">
+      <h1>💰 Kazanç Sayacı</h1>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-title">Bilgilerini gir</div>
+
+      <div class="input-group">
+        <label class="input-label">Maaşın</label>
+        <div class="input-row">
+          <input type="number" id="salary-input" placeholder="15000" inputmode="numeric">
+          <select id="currency-select">
+            <option value="₺">₺ TL</option>
+            <option value="$">$ USD</option>
+            <option value="€">€ EUR</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Günlük çalışma saati</label>
+        <input type="number" id="hours-input" placeholder="8" value="8" min="1" max="24" inputmode="numeric">
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Ayda kaç gün çalışıyorsun?</label>
+        <input type="number" id="days-input" placeholder="22" value="22" min="1" max="31" inputmode="numeric">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary btn-wide" onclick="startTracking()">Saymaya Başla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RUNNING SCREEN -->
+  <div id="screen-running" class="hidden">
+    <div class="top-row">
+      <div class="header" style="text-align:left">
+        <h1>💰 Kazanç Sayacı</h1>
+      </div>
+      <button class="edit-btn" onclick="goSetup()">Düzenle</button>
+    </div>
+
+    <div class="counter-card" id="counter-card">
+      <div class="counter-label">Bugün kazandın</div>
+      <div class="counter-value" id="today-earned">0.00</div>
+      <div class="counter-currency" id="currency-display">₺</div>
+      <div class="time-worked" id="time-worked">0s çalışıldı</div>
+      <div class="status-row">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-text" id="status-text">Beklemede</span>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Dakikada</div>
+        <div class="stat-value highlight" id="per-minute">0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Saatte</div>
+        <div class="stat-value" id="per-hour">0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Aylık</div>
+        <div class="stat-value" id="monthly">0</div>
+      </div>
+    </div>
+
+    <div class="progress-card">
+      <div class="progress-header">
+        <span class="progress-label">Günlük hedef</span>
+        <span class="progress-pct" id="progress-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="start-btn" onclick="toggleTimer()">▶ Başlat</button>
+      <button class="btn btn-stop" onclick="resetDay()">↺ Sıfırla</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const STORAGE_KEY = 'kazanc_sayac';
+
+  let salary = 0;
+  let currency = '₺';
+  let hoursPerDay = 8;
+  let daysPerMonth = 22;
+  let perSecond = 0;
+  let perMinute = 0;
+  let perHour = 0;
+  let dailyTarget = 0;
+
+  let running = false;
+  let totalSeconds = 0;
+  let intervalId = null;
+  let lastTick = null;
+
+  // --- Persistence ---
+  function saveState() {
+    const today = new Date().toDateString();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      salary, currency, hoursPerDay, daysPerMonth,
+      totalSeconds, date: today
+    }));
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      // Farklı gün ise totalSeconds sıfırla
+      if (s.date !== new Date().toDateString()) {
+        s.totalSeconds = 0;
+      }
+      return s;
+    } catch { return null; }
+  }
+
+  // --- Init ---
+  window.addEventListener('DOMContentLoaded', () => {
+    const s = loadState();
+    if (s && s.salary > 0) {
+      // Form alanlarını doldur
+      document.getElementById('salary-input').value = s.salary;
+      document.getElementById('currency-select').value = s.currency || '₺';
+      document.getElementById('hours-input').value = s.hoursPerDay || 8;
+      document.getElementById('days-input').value = s.daysPerMonth || 22;
+      // Direkt çalışan ekranına geç
+      applySettings(s.salary, s.currency, s.hoursPerDay, s.daysPerMonth, s.totalSeconds);
+    }
+  });
+
+  // Sekme kapanırken kaydet
+  window.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (running) pause();
+      saveState();
+    }
+  });
+  window.addEventListener('pagehide', () => { if (running) pause(); saveState(); });
+
+  // --- Core ---
+  function applySettings(sal, cur, hours, days, seconds = 0) {
+    salary = sal;
+    currency = cur;
+    hoursPerDay = hours;
+    daysPerMonth = days;
+    totalSeconds = seconds;
+
+    const workSecondsPerMonth = hoursPerDay * daysPerMonth * 3600;
+    perSecond = salary / workSecondsPerMonth;
+    perMinute = perSecond * 60;
+    perHour = perSecond * 3600;
+    dailyTarget = salary / daysPerMonth;
+
+    document.getElementById('currency-display').textContent = currency;
+    document.getElementById('per-minute').textContent = fmt(perMinute);
+    document.getElementById('per-hour').textContent = fmt(perHour);
+    document.getElementById('monthly').textContent = fmtShort(salary);
+
+    document.getElementById('screen-setup').classList.add('hidden');
+    document.getElementById('screen-running').classList.remove('hidden');
+
+    updateDisplay();
+  }
+
+  function startTracking() {
+    const sal = parseFloat(document.getElementById('salary-input').value) || 0;
+    if (sal <= 0) { document.getElementById('salary-input').focus(); return; }
+    const cur = document.getElementById('currency-select').value;
+    const hours = parseFloat(document.getElementById('hours-input').value) || 8;
+    const days = parseFloat(document.getElementById('days-input').value) || 22;
+    applySettings(sal, cur, hours, days, 0);
+    saveState();
+  }
+
+  function toggleTimer() {
+    running ? pause() : start();
+  }
+
+  function start() {
+    running = true;
+    lastTick = Date.now();
+    document.getElementById('start-btn').textContent = '⏸ Durdur';
+    document.getElementById('status-dot').classList.add('active');
+    document.getElementById('status-text').textContent = 'Sayılıyor';
+    document.getElementById('counter-card').classList.add('running');
+    intervalId = setInterval(tick, 100);
+  }
+
+  function pause() {
+    running = false;
+    clearInterval(intervalId);
+    document.getElementById('start-btn').textContent = '▶ Devam';
+    document.getElementById('status-dot').classList.remove('active');
+    document.getElementById('status-text').textContent = 'Duraklatıldı';
+    document.getElementById('counter-card').classList.remove('running');
+    saveState();
+  }
+
+  function tick() {
+    const now = Date.now();
+    const delta = (now - lastTick) / 1000;
+    lastTick = now;
+    totalSeconds += delta;
+    // Her 10 saniyede bir kaydet
+    if (Math.floor(totalSeconds) % 10 === 0) saveState();
+    updateDisplay();
+  }
+
+  function updateDisplay() {
+    const earned = totalSeconds * perSecond;
+    const pct = Math.min((earned / dailyTarget) * 100, 100);
+    document.getElementById('today-earned').textContent = fmt(earned);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-pct').textContent = pct.toFixed(1) + '%';
+    document.getElementById('time-worked').textContent = formatTime(totalSeconds) + ' çalışıldı';
+  }
+
+  function resetDay() {
+    pause();
+    totalSeconds = 0;
+    document.getElementById('start-btn').textContent = '▶ Başlat';
+    document.getElementById('status-text').textContent = 'Beklemede';
+    updateDisplay();
+    saveState();
+  }
+
+  function goSetup() {
+    pause();
+    document.getElementById('screen-running').classList.add('hidden');
+    document.getElementById('screen-setup').classList.remove('hidden');
+  }
+
+  function fmt(n) {
+    if (n < 10) return n.toFixed(3);
+    if (n < 100) return n.toFixed(2);
+    return n.toFixed(1);
+  }
+
+  function fmtShort(n) {
+    if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+    return n.toFixed(0);
+  }
+
+  function formatTime(s) {
+    s = Math.floor(s);
+    if (s < 60) return s + 's';
+    if (s < 3600) return Math.floor(s/60) + 'dk ' + (s%60) + 's';
+    return Math.floor(s/3600) + 'sa ' + Math.floor((s%3600)/60) + 'dk';
+  }
+</script>
+</body>
+</html>
